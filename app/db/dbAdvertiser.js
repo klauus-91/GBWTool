@@ -10,20 +10,21 @@ const pool = require('../../db'); // adjust path if needed
  * @param {number} adv.accountNumber - Number of accounts
  * @param {string} adv.boostType - Type of boost advertised
  */
-async function addAdv({ userId, raiderIo, battleTag, vouch, accountNumber, boostType }) {
+async function addAdv({ userId, raiderIo, battleTag, vouch, accountNumber, boostType, nickname }) {
     const query = `
-        INSERT INTO advertiser (user_id, raider_io, battle_tag, vouch, account_number, boost_type)
-        VALUES ($1, $2, $3, $4, $5, $6)
+        INSERT INTO advertiser (user_id, raider_io, battle_tag, vouch, account_number, boost_type, nickname)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
             ON CONFLICT (user_id) DO UPDATE
                                          SET raider_io = EXCLUDED.raider_io,
                                          battle_tag = EXCLUDED.battle_tag,
                                          vouch = EXCLUDED.vouch,
                                          account_number = EXCLUDED.account_number,
-                                         boost_type = EXCLUDED.boost_type
+                                         boost_type = EXCLUDED.boost_type,
+                                        nickname = EXCLUDED.nickname
                                          RETURNING *;
     `;
 
-    const values = [userId, raiderIo, battleTag, vouch, accountNumber, boostType];
+    const values = [userId, raiderIo, battleTag, vouch, accountNumber, boostType, nickname];
 
     try {
         const res = await pool.query(query, values);

@@ -2,6 +2,35 @@ const { ButtonStyle, ActionRowBuilder, ButtonBuilder, EmbedBuilder, AttachmentBu
 const { getApplication, removeApplication } = require("../db/memory");
 const { addAdv } = require("../db/dbAdvertiser");
 
+async function getRaiderIoProfile(region, realm, name) {
+    const accessKey = 'RIOLs5L1Y9vrmA5qh9yUzg9Xb';
+    const apiUrl = `https://raider.io/api/v1/characters/profile?access_key=${accessKey}&region=${region}&realm=${realm}&name=${name}&fields=mythic_plus_scores_by_season:current`;
+    const response = await fetch(apiUrl, { headers: { 'accept': 'application/json' } });
+    const data = await response.json();
+    return data;
+}
+
+function parseRaiderIoUrl(raiderIo) {
+    // Remove query params
+    const cleanUrl = raiderIo.split('?')[0];
+
+    // Split into parts
+    const parts = cleanUrl.split('/');
+
+    // Find index of "characters"
+    const charIndex = parts.indexOf("characters");
+    if (charIndex === -1 || !parts[charIndex + 3]) {
+        throw new Error("❌ Invalid Raider.IO URL format");
+    }
+
+    const region = parts[charIndex + 1]; // "eu"
+    const realm = decodeURIComponent(parts[charIndex + 2]); // "archimonde"
+    const characterName = decodeURIComponent(parts[charIndex + 3]); // "Gergruid"
+    const cleanRaiderIO = decodeURIComponent(cleanUrl)
+
+    return { region, realm, characterName, cleanRaiderIO };
+}
+
 module.exports = {
     execute: async (interaction) => {
         try {
@@ -25,6 +54,9 @@ module.exports = {
             if (!data) return interaction.reply({ content: "❌ Application data not found.", ephemeral: true });
 
             const { raiderIO, battleTag, boostType, vouch, accountNumber } = data;
+            const raiderIo = data.raiderIO;
+            const {region, realm, characterName, cleanRaiderIO} =  parseRaiderIoUrl(raiderIo)
+            const profileData = await getRaiderIoProfile(region, realm, characterName);
             console.log(data)
 
             // Insert/update advertiser in DB
@@ -34,7 +66,8 @@ module.exports = {
                 battleTag: data.battleTag,
                 vouch: data.vouch,
                 accountNumber: parseInt(data.accounts, 10) || 1, // ensure it's a number
-                boostType: data.boostType
+                boostType: data.boostType,
+                nickname: characterName + '-' + realm
             });
 
             // Remove application from memory
